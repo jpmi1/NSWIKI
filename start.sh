@@ -7,22 +7,6 @@ set -euo pipefail
 : "${SIYUAN_FLAGS:=--no-sandbox --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage}"
 export TZ="${TZ:-Asia/Singapore}"
 
-# Force create DBus directories and socket with proper permissions
-echo "Creating DBus directories and socket files..."
-mkdir -p /run/dbus
-mkdir -p /var/run/dbus
-touch /run/dbus/system_bus_socket
-chmod 755 /run/dbus
-chmod 755 /var/run/dbus
-chmod 777 /run/dbus/system_bus_socket
-
-# Set environment variables to minimize DBus errors
-export NO_AT_BRIDGE=1
-export DBUS_SESSION_BUS_ADDRESS="unix:path=/tmp/dbus-dummy.socket"
-export DBUS_SYSTEM_BUS_ADDRESS="unix:path=/tmp/dbus-dummy.socket"
-touch /tmp/dbus-dummy.socket
-chmod 777 /tmp/dbus-dummy.socket
-
 wait_for_port() {
   local host=$1 port=$2 timeout=$3
   for ((i=0;i<timeout;i++)); do
@@ -55,6 +39,7 @@ if [ -z "${KPID:-}" ]; then
   SIYUAN_FLAGS="${SIYUAN_FLAGS} --disable-features=DBus,BlinkGenPropertyTrees,UseChromeOSDirectVideoDecoder"
   
   echo "Starting SiYuan with flags: ${SIYUAN_FLAGS}"
+  eval $(dbus-launch --sh-syntax --exit-with-session)
   /opt/siyuan/siyuan --workspace=/siyuan/workspace --accessAuthCode="${SIYUAN_ACCESS_AUTH_CODE}" --port="${SIYUAN_INTERNAL_PORT}" ${SIYUAN_FLAGS} &
   KPID=$!
   if ! wait_for_port 127.0.0.1 "${SIYUAN_INTERNAL_PORT}" 30; then
